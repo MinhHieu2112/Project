@@ -41,7 +41,7 @@ export class RegisterDto {
   })
   @IsOptional()
   @IsString()
-  firstname?: string;
+  firstName?: string;
 
   @ApiProperty({
     description: 'User last name',
@@ -50,5 +50,5 @@ export class RegisterDto {
   })
   @IsOptional()
   @IsString()
-  lastname?: string;
+  lastName?: string;
 }

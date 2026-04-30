@@ -1,71 +1,63 @@
-// Refresh Token Strategy
-import { ConfigService } from '@nestjs/config/dist/config.service';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy } from 'passport-jwt';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { ExtractJwt } from 'passport-jwt';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
-import { UnauthorizedException, Injectable } from '@nestjs/common';
+import { UnauthorizedException, Injectable, Logger } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class RefreshTokenStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh',
 ) {
+  private readonly logger = new Logger(RefreshTokenStrategy.name);
+
   constructor(
-    private configService: ConfigService,
-    private prisma: PrismaService,
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_REFRESH_SECRET'),
+      secretOrKey: configService.getOrThrow<string>('JWT_REFRESH_SECRET'),
       passReqToCallback: true,
     });
   }
 
-  // Validate refresh token
   async validate(req: Request, payload: { sub: string; email: string }) {
-    console.log('RefreshTokenStrategy.validate called');
-    console.log('Payload', { sub: payload.sub, email: payload.email });
+    // 1. Trích xuất token một cách gọn gàng
+    const refreshToken = req.get('Authorization')?.replace('Bearer', '').trim();
 
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      console.log('No Authorization header found');
-      throw new UnauthorizedException('Refresh token not provided');
-    }
-
-    const refreshToken = authHeader.replace('Bearer', '').trim();
     if (!refreshToken) {
-      throw new UnauthorizedException(
-        'Refresh token is empty after extraction',
-      );
+      throw new UnauthorizedException('Refresh token missing');
     }
 
+    // 2. Query dữ liệu tối giản
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: {
-        id: true,
-        email: true,
-        role: true,
-        refreshToken: true,
-      },
+      select: { id: true, email: true, role: true, refreshToken: true },
     });
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid refresh token');
+    // 3. Sử dụng Guard Clauses để code không bị lồng nhau (Flat structure)
+    if (!user || !user.refreshToken) {
+      throw new UnauthorizedException('Access Denied');
     }
 
-    const refreshTokenMatches = await bcrypt.compare(
+    // 4. Kiểm tra khớp token
+    const isTokenMatched = await bcrypt.compare(
       refreshToken,
       user.refreshToken,
     );
 
-    if (!refreshTokenMatches) {
-      throw new UnauthorizedException('Invalid refresh does not match');
+    if (!isTokenMatched) {
+      this.logger.warn(`Failed refresh attempt for user: ${user.email}`);
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    return { id: user.id, email: user.email, role: user.role };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
   }
 }

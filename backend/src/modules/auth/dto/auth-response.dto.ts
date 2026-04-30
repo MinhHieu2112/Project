@@ -1,7 +1,7 @@
 // DTO for auth response
 
 import { ApiProperty } from '@nestjs/swagger';
-import { Role } from '@prisma/client';
+import { Role } from '../../../generated/prisma/client.js';
 
 export class AuthResponseDto {
   @ApiProperty({
@@ -21,16 +21,16 @@ export class AuthResponseDto {
     example: {
       id: '123e4567-e89b-12d3-a456-426614174000',
       email: 'test@example.com',
-      firstname: 'Hieu',
-      lastname: 'Nguyen',
+      firstName: 'Hieu',
+      lastName: 'Nguyen',
       role: 'USER',
     },
   })
   user!: {
     id: string;
     email: string;
-    firstname: string | null;
-    lastname: string | null;
+    firstName: string | null;
+    lastName: string | null;
     role: Role;
   };
 }

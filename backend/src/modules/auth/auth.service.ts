@@ -21,7 +21,7 @@ export class AuthService {
 
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
     // Check if user already exists
-    const { email, password, firstname, lastname } = registerDto;
+    const { email, password, firstName, lastName } = registerDto;
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
@@ -38,14 +38,14 @@ export class AuthService {
         data: {
           email,
           password: hashedPassword,
-          firstname,
-          lastname,
+          firstName,
+          lastName,
         },
         select: {
           id: true,
           email: true,
-          firstname: true,
-          lastname: true,
+          firstName: true,
+          lastName: true,
           role: true,
           password: false, // Exclude password from the response
         },
@@ -100,8 +100,8 @@ export class AuthService {
       select: {
         id: true,
         email: true,
-        firstname: true,
-        lastname: true,
+        firstName: true,
+        lastName: true,
         role: true,
       },
     });
@@ -147,8 +147,8 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
-        firstname: user.firstname,
-        lastname: user.lastname,
+        firstName: user.firstName,
+        lastName: user.lastName,
         role: user.role,
       },
     };
